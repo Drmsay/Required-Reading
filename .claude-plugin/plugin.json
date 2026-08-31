@@ -1,7 +1,7 @@
 {
   "name": "required-reading",
-  "version": "2.0.1",
-  "description": "Full-lifecycle engineering standards enforcement for Claude Code — 10 domains, checklists, and multi-agent team mode.",
+  "version": "3.0.0",
+  "description": "Full-lifecycle engineering standards enforcement for Claude Code — 20 domains, checklists, and multi-agent team mode.",
   "author": {
     "name": "Drmsay",
     "url": "https://github.com/Drmsay"
@@ -25,6 +25,20 @@
     "data-engineering",
     "product-management",
     "ux",
-    "technical-leadership"
+    "technical-leadership",
+    "ai-engineering",
+    "llm",
+    "api-design",
+    "cryptography",
+    "distributed-systems",
+    "concurrency",
+    "documentation",
+    "offensive-security",
+    "performance",
+    "platform-engineering",
+    "kubernetes",
+    "security-operations",
+    "algorithms",
+    "computer-science"
   ]
 }

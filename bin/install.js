@@ -16,6 +16,16 @@ const allSkills = [
   "required-reading-product",
   "required-reading-ux",
   "required-reading-leadership",
+  "required-reading-ai",
+  "required-reading-api",
+  "required-reading-fundamentals",
+  "required-reading-cryptography",
+  "required-reading-distributed",
+  "required-reading-documentation",
+  "required-reading-offensive-security",
+  "required-reading-performance",
+  "required-reading-platform",
+  "required-reading-secops",
 ];
 
 const skillsBase = path.join(os.homedir(), ".claude", "skills");
@@ -37,7 +47,7 @@ function installSkill(skillName) {
 }
 
 try {
-  console.log("\n  Installing required-reading v2.0.1...\n");
+  console.log("\n  Installing required-reading v3.0.0...\n");
 
   let installed = 0;
   for (const skill of allSkills) {
@@ -57,7 +67,7 @@ try {
   console.log("  Skill files copied to:");
   console.log(`  ${skillsBase}/\n`);
   console.log("  Claude Code will now enforce professional engineering");
-  console.log("  standards across all 10 domains whenever you write,");
+  console.log("  standards across all 20 domains whenever you write,");
   console.log("  review, design, or plan software.\n");
   console.log("  Domain specialists are available for deep-dive reviews");
   console.log("  and multi-agent Team Mode.\n");

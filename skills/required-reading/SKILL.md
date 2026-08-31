@@ -28,10 +28,61 @@ When principles from different domains conflict with each other (e.g., security 
 stricter validation but UX wants fewer friction points), flag the trade-off, explain
 both sides, and recommend the resolution that best fits the context.
 
+### Decision Reversibility
+
+Classify every non-trivial decision before acting on it:
+
+- **Two-way door (reversible)** — cheap to undo. Decide quickly and proceed. Do NOT
+  stall on analysis, and do NOT ask the user to arbitrate what you can safely try.
+  Examples: internal function naming, a local refactor, adding a test, a new helper.
+- **One-way door (irreversible or expensive to reverse)** — proceed carefully, state
+  the trade-off, and confirm before acting. Examples: deleting files or data, schema
+  migrations that drop columns, force-pushing or rewriting history, changing a public
+  API or wire format, introducing a dependency that will spread, renaming things
+  outside this repo's control.
+
+Speed on two-way doors, deliberation on one-way doors. Treating everything as
+irreversible is as much a failure as treating everything as reversible.
+
+### Domain Relevance Gate — READ BEFORE APPLYING ANYTHING
+
+There are 20 domains here. **Most tasks touch three to six of them.** Applying all 20 to
+every task produces noise, and noise is how enforcement gets ignored entirely.
+
+Before applying rules, select the relevant domains:
+
+1. **Always relevant** to any code change: Software Engineering, and whichever of
+   Architecture, Testing, or Security the change actually touches.
+2. **Relevant on trigger** — include the domain only when the work involves it:
+
+| Include this domain | When the work involves |
+|--------------------|------------------------|
+| AI & LLM (11) | model calls, prompts, agents, RAG, embeddings, evals |
+| API Design (12) | an API contract, endpoint, schema, or webhook |
+| CS Fundamentals (13) | non-trivial algorithms, data structure choice, hot loops |
+| Cryptography (14) | encryption, hashing, auth, sessions, tokens, certificates |
+| Distributed (15) | network calls, queues, concurrency, replication, async work |
+| Documentation (16) | READMEs, guides, reference docs, runbooks, public rationale |
+| Offensive Security (17) | authorized testing, assessment, or vulnerability research |
+| Performance (18) | a stated performance goal, profiling, or a known hot path |
+| Platform (19) | Kubernetes, IaC, containers, CI platform, developer tooling |
+| Security Operations (20) | logging, detection, incident response, access architecture |
+| Data (6) | schemas, queries, migrations, pipelines |
+| DevOps (5) | build, deploy, release, observability, reliability |
+| Product (8) / Delivery (7) | scope, prioritization, estimation, planning |
+| UX (9) | user-facing interface work |
+| Leadership (10) | see Part 10 — 10.1-10.3 always; 10.4 only when advising a human |
+
+3. **State which domains you selected** when reporting, so the omission is visible and
+   deliberate rather than accidental.
+
+A rule from an irrelevant domain is not a finding. Do not pad reports to demonstrate
+coverage — that is the failure mode this gate exists to prevent.
+
 ### How This Document Works
-- **Parts 1-10**: Domain rules — enforced continuously during all work.
-- **Part 11**: Work-type checklists — triggered by the type of task being performed.
-- **Part 12**: Enforcement & reporting protocol — how to classify, apply, check, and report.
+- **Parts 1-20**: Domain rules — enforced continuously during all work.
+- **Part 21**: Work-type checklists — triggered by the type of task being performed.
+- **Part 22**: Enforcement & reporting protocol — how to classify, apply, check, and report.
 
 ### Deep-Dive Specialists
 For thorough domain analysis, dedicated specialist skills exist for each domain:
@@ -48,10 +99,20 @@ For thorough domain analysis, dedicated specialist skills exist for each domain:
 | Product Management | `required-reading-product` |
 | UX Engineering | `required-reading-ux` |
 | Technical Leadership | `required-reading-leadership` |
+| AI & LLM Engineering | `required-reading-ai` |
+| API Design & Integration | `required-reading-api` |
+| CS Fundamentals | `required-reading-fundamentals` |
+| Cryptography & Identity | `required-reading-cryptography` |
+| Distributed Systems & Concurrency | `required-reading-distributed` |
+| Documentation & Technical Communication | `required-reading-documentation` |
+| Offensive Security & Assessment | `required-reading-offensive-security` |
+| Performance Engineering | `required-reading-performance` |
+| Platform Engineering | `required-reading-platform` |
+| Security Operations & Infrastructure | `required-reading-secops` |
 
 These contain extended rules (30-50+ rules each), deeper anti-pattern catalogs, and
 domain-specific review templates. Invoke them for focused deep-dives, or use them
-in Team Mode (see Part 12) for parallel multi-domain reviews.
+in Team Mode (see Part 22) for parallel multi-domain reviews.
 
 ---
 
@@ -222,10 +283,24 @@ domain modeling, and design patterns.*
 - **ALWAYS** record architectural decisions (ADRs): context, decision, alternatives,
   consequences.
 
+### 2.9 Speculative Design
+
+- **NEVER** design for requirements that do not exist yet. Solve today's problem with
+  today's constraints. "We might need to swap the database someday" is not a requirement.
+- **NEVER** add configuration options, extension points, plugin systems, or abstraction
+  layers with only one implementation on the theory that a second will arrive.
+- **ALWAYS** prefer the simplest structure that satisfies the known requirements. It is
+  cheaper to add an abstraction when the second case appears than to maintain a wrong
+  one until then.
+- Speculative generality is the most common way well-intentioned design becomes
+  unmaintainable. Flag it in your own output before flagging it in anyone else's.
+
 ### Anti-Patterns (Architecture)
 Reject on sight: **Anemic Domain Model**, **Distributed Monolith** (services that can't
 deploy independently), **Leaky Abstraction**, **Cargo Cult Architecture** (adopting
-patterns without understanding trade-offs), **Circular Dependencies**.
+patterns without understanding trade-offs), **Circular Dependencies**, **Architecture
+Astronaut** (designing for imaginary future requirements — see 2.9), **Speculative
+Generality** (abstractions, hooks, or parameters with a single caller).
 
 ---
 
@@ -601,39 +676,743 @@ design forced onto mobile**.
 *Distilled from the most authoritative works on engineering management, staff-level
 engineering, and organizational health.*
 
-### 10.1 Decision Making
+This domain has two modes. **10.1-10.3 apply to your own work and are enforced like
+every other Part.** **10.4 is advisory** — it applies when a human asks you to help
+lead, not to code you are writing. Do not generate org-level commentary during ordinary
+engineering tasks.
+
+### 10.1 Decisions & Records — applies to your own work
 
 - **ALWAYS** record significant architectural decisions as ADRs (Architecture Decision
   Records): context, decision, alternatives considered, consequences.
-- **ALWAYS** communicate technical vision clearly. The team should understand WHY the
-  architecture looks the way it does.
-- **ALWAYS** make reversible decisions quickly and irreversible decisions carefully.
+- **ALWAYS** classify decisions by reversibility before acting. See **Decision
+  Reversibility** in the Enforcement Protocol above — that rule governs execution, not
+  just leadership.
+- **ALWAYS** make the implicit explicit. Unwritten conventions become inconsistent
+  conventions. If you infer a project rule, write it down where the next reader will find it.
+- **ALWAYS** document WHY, not just WHAT. A decision without its rationale cannot be
+  safely revisited.
 
-### 10.2 Team Health
+### 10.2 Review & Communication — applies to your own work
 
-- **ALWAYS** build psychological safety. People must feel safe to raise concerns,
-  admit mistakes, and challenge decisions.
-- **ALWAYS** practice intent-based leadership. Push decision-making authority to those
-  with the most information (usually the people doing the work).
-- **ALWAYS** sponsor and mentor. Senior engineers multiply their impact through others.
-
-### 10.3 Systems Thinking
-
-- **ALWAYS** think in systems. Local optimizations often create global problems.
-- **ALWAYS** allocate capacity deliberately across feature work, tech debt, operational
-  excellence, and growth.
 - **ALWAYS** use code review as a teaching and alignment tool, not a gatekeeping
-  mechanism.
+  mechanism. Explain the WHY and link to the principle, not just the WHAT.
+- **ALWAYS** review the approach, not only the code. Is this solving the right problem?
+- **NEVER** block on style preference. Raise non-blocking improvements as suggestions,
+  clearly labeled as such.
+- **ALWAYS** critique the design, not the designer. Review code, not coders.
+- **ALWAYS** apply blameless framing to failures. Ask "how did the system allow this?"
+  not "who did this?" This applies to your own mistakes as much as to anyone else's.
+- **ALWAYS** give feedback that is specific, actionable, and honest. "Looks fine" is
+  not a review.
+
+### 10.3 Systems Thinking — applies to your own work
+
+- **ALWAYS** think in systems, not events. Local optimizations often create global problems.
+- **ALWAYS** consider second-order effects. What happens when every caller does this?
+  What does this incentivize?
+- **ALWAYS** optimize globally. A faster build that produces an unmaintainable artifact
+  is not an improvement.
+- **ALWAYS** make technical debt visible when you create or encounter it. Undocumented
+  debt compounds silently.
+
+### 10.4 Advisory: Human Team Leadership — only when asked
+
+Apply when the user is making organizational, hiring, mentoring, or capacity decisions,
+or explicitly asks for leadership guidance. Do not volunteer this during code work.
+
+- Psychological safety is the strongest predictor of team effectiveness. People must
+  feel safe to raise concerns, admit mistakes, and challenge decisions.
+- Intent-based leadership: push decision authority to those with the most context, and
+  build the competence and clarity that makes that safe.
+- Sponsorship (advocacy) and mentorship (advice) are different, and both are required.
+- Allocate capacity deliberately across feature work, tech debt, operational excellence,
+  and growth. If it is not deliberate, it defaults to 100% features.
+- Conway's Law: organize teams for the architecture you want.
 
 ### Anti-Patterns (Leadership)
-Reject on sight: **Hero dependency** (single point of failure for knowledge),
-**Architecture astronaut** (designing for imaginary future requirements), **Gatekeeping
-reviews** (blocking without teaching), **Invisible technical debt** (no tracking,
-no allocation), **Decision by committee with no owner**.
+Reject on sight in code and repos: **Hero dependency** (single point of failure for
+knowledge), **Gatekeeping reviews** (blocking without teaching), **Invisible technical
+debt** (no tracking, no allocation), **Information hoarding** (knowledge that exists
+only in one head or one unshared doc).
+
+Raise only in advisory mode: **Decision by committee with no owner**, **Empire
+building**, **Seagull management**, **Burn and churn** (unsustainable pace).
+
+*(Architecture Astronaut moved to Part 2.9 — it is an architecture failure mode that
+applies to your own designs, not an organizational one.)*
 
 ---
 
-## PART 11: WORK-TYPE CHECKLISTS
+## PART 11: AI & LLM ENGINEERING
+
+*Distilled from the most authoritative works on foundation-model applications,
+production machine learning, and evaluation.*
+
+### 11.1 Problem Framing
+
+- **NEVER** reach for an LLM when a deterministic solution exists. A regex, a lookup
+  table, or a SQL query beats a model call on cost, latency, and reliability.
+- **ALWAYS** define the success criterion before building. "Better answers" is not a
+  criterion. "At least 90% exact match on this 200-case set" is.
+- **ALWAYS** prefer the smallest capable model. Escalate on measured failure, not on
+  assumption.
+
+### 11.2 Prompt & Context Engineering
+
+- **ALWAYS** treat prompts as versioned artifacts. They live in the repository, under
+  review, with tests — never as unversioned inline string literals.
+- **ALWAYS** put stable content first and volatile content last. Prefix stability is what
+  makes caching work.
+- **NEVER** concatenate untrusted input into a prompt without delimiting and labeling it.
+  Prompt injection is an injection vulnerability — treat it like SQL.
+- **ALWAYS** specify the output contract explicitly (schema, enum, length), then parse and
+  validate the response. Never assume the model honored the format.
+- **NEVER** let context grow unbounded. Budget tokens deliberately across system
+  instructions, retrieved context, history, and output.
+
+### 11.3 Evaluation
+
+- **NEVER** ship on vibes. An eval set is mandatory before a prompt or model change
+  reaches production.
+- **ALWAYS** build the eval set from real observed failures, not imagined ones.
+- **ALWAYS** hold out a set the prompt was not tuned against.
+- **ALWAYS** prefer deterministic metrics where the task permits (exact match, schema
+  validity, tool-call correctness). Reserve LLM-as-judge for genuinely subjective
+  dimensions, and validate the judge against human labels before trusting it.
+- **ALWAYS** re-run evals when the model version changes. Provider upgrades are silent
+  behavior changes.
+
+### 11.4 Retrieval (RAG)
+
+- **ALWAYS** evaluate retrieval separately from generation. Most "the model is wrong"
+  failures are retrieval failures.
+- **ALWAYS** chunk on semantic boundaries, not fixed character counts.
+- **ALWAYS** return citations alongside retrieved content so answers stay auditable.
+- **NEVER** assume more retrieved context is better. Irrelevant context degrades output.
+
+### 11.5 Production Operations
+
+- **ALWAYS** log prompt, response, model version, and token counts for every call.
+  Without this you cannot debug or evaluate.
+- **ALWAYS** set explicit timeouts, retries with backoff, and a fallback path. Model APIs
+  fail like any other network dependency.
+- **ALWAYS** enforce cost and rate budgets in code, not in policy documents.
+- **ALWAYS** treat model output as untrusted input to downstream systems. Never pass it
+  unvalidated into a shell, query, file path, or rendered HTML.
+- **ALWAYS** require human confirmation for consequential or irreversible model-triggered
+  actions.
+
+### Anti-Patterns (AI & LLM)
+Reject on sight: **Vibes-based evaluation** (no eval set), **Prompt injection via
+concatenation**, **Unbounded context growth**, **Unvalidated model output** used
+downstream, **Silent model drift** (no version pinning, no re-eval), **LLM for a
+deterministic problem**, **Retrieval that is never measured**.
+
+---
+
+## PART 12: API DESIGN & INTEGRATION
+
+*Distilled from the most authoritative works on web API design, REST, and enterprise
+integration patterns.*
+
+### 12.1 Contract Design
+
+- **ALWAYS** design the contract before the implementation. The API is the product; the
+  implementation is an internal detail.
+- **NEVER** expose internal data models directly on the wire. The wire format is a
+  deliberate contract, not a serialized database row.
+- **ALWAYS** use nouns for resources and HTTP methods for operations.
+- **ALWAYS** honor HTTP semantics: GET is safe and idempotent; PUT and DELETE are
+  idempotent; POST is neither. Violating this breaks caches, proxies, and retries.
+- **ALWAYS** return the correct status code. A 200 response carrying an error body lies to
+  every client, proxy, and monitor in the path.
+
+### 12.2 Evolution & Versioning
+
+- **NEVER** make a breaking change without a version. Adding an optional field is safe;
+  removing a field, renaming it, tightening validation, or changing a type is not.
+- **ALWAYS** version explicitly (URI path or media type). Pick one and apply it uniformly.
+- **ALWAYS** deprecate before removing: announce, instrument to find remaining callers,
+  set a date, then remove.
+- **ALWAYS** write clients to tolerate unknown fields. Strict parsers make every additive
+  change breaking.
+
+### 12.3 Errors
+
+- **ALWAYS** return machine-readable errors: a stable error code, a human-readable
+  message, and enough context to act on.
+- **NEVER** leak stack traces, SQL, or internal hostnames in error responses.
+- **ALWAYS** distinguish client error (4xx, do not retry unchanged) from server error
+  (5xx, retry with backoff).
+
+### 12.4 Collections & Payloads
+
+- **NEVER** return an unbounded collection. Every list endpoint paginates from day one.
+- **ALWAYS** prefer cursor pagination over offset for large or mutating datasets.
+- **ALWAYS** let the client shape the response (field selection, expansion) rather than
+  shipping N variants of the same endpoint.
+
+### 12.5 Integration
+
+- **ALWAYS** make consumers idempotent. Networks deliver twice.
+- **ALWAYS** support an idempotency key for non-idempotent operations clients may retry.
+- **ALWAYS** isolate external systems behind an Anti-Corruption Layer. Their model must
+  not leak into yours.
+- **ALWAYS** apply timeouts, jittered retries, and circuit breakers at every integration point.
+- **ALWAYS** prefer asynchronous messaging when the caller does not need the result now.
+
+### 12.6 Documentation
+
+- **ALWAYS** publish a machine-readable spec (OpenAPI, gRPC IDL, GraphQL schema) that is
+  generated from or verified against the implementation.
+- **NEVER** let documentation and behavior diverge. Contract tests keep them honest.
+
+### Anti-Patterns (API Design)
+Reject on sight: **200 OK with an error body**, **Unversioned breaking change**,
+**Unbounded collection endpoint**, **Leaked internal model** on the wire, **Chatty API**
+(N calls for one user intent), **Verbs in resource paths**, **Undocumented endpoint**,
+**Retry without idempotency**.
+
+---
+
+## PART 13: COMPUTER SCIENCE FUNDAMENTALS
+
+*Distilled from the most authoritative works on algorithms, data structures, computer
+systems, and the theory of computation.*
+
+### 13.1 Complexity
+
+- **ALWAYS** know the time and space complexity of what you write. If you cannot state it,
+  you do not understand the code.
+- **ALWAYS** check for accidental quadratic behavior: a linear scan inside a loop, a list
+  membership test inside a loop, string concatenation in a loop.
+- **ALWAYS** weigh actual input size. O(n^2) at n<=100 is fine; O(n log n) at n=10^9 may
+  not be.
+- **NEVER** treat complexity as the whole story. Constants and memory locality decide real
+  performance.
+
+### 13.2 Data Structure Selection
+
+- **ALWAYS** choose from the access pattern: hash map for keyed lookup, array for indexed
+  and cache-friendly iteration, sorted structure or tree for ordered traversal and range
+  queries, heap for repeated min/max, set for membership.
+- **NEVER** use a list where a set or map is correct. Repeated membership tests on a list
+  are the most common accidental quadratic in production code.
+- **ALWAYS** prefer the standard library implementation. Hand-rolled data structures are a
+  liability without a measured, documented reason.
+
+### 13.3 Algorithm Design
+
+- **ALWAYS** reach for a known technique before inventing one: divide and conquer, dynamic
+  programming, greedy (only with a proof or strong argument), binary search on the answer,
+  graph traversal.
+- **ALWAYS** state the invariant of a loop or recursion. If you cannot, the code is
+  probably wrong at a boundary.
+- **ALWAYS** handle the empty, single-element, and maximum cases explicitly.
+
+### 13.4 Systems Fundamentals
+
+- **ALWAYS** respect the memory hierarchy. Sequential access beats pointer chasing; cache
+  misses dominate arithmetic.
+- **ALWAYS** keep the orders of magnitude in mind: L1 about 1ns, main memory about 100ns,
+  SSD about 100us, network round trip 1ms or more. Design against these, not intuition.
+- **ALWAYS** understand what the runtime does on your behalf — allocation, garbage
+  collection, boxing, virtual dispatch — before optimizing.
+- **NEVER** assume arithmetic is safe. Know your overflow, truncation, and floating-point
+  semantics. Never compare floats for exact equality.
+
+### 13.5 Correctness
+
+- **ALWAYS** reason about termination for every loop and recursion.
+- **ALWAYS** bound recursion depth, or convert to iteration, when input size is unbounded.
+- **ALWAYS** treat concurrency, time zones, Unicode, and floating point as domains with
+  real theory behind them — not things to guess at.
+
+### Anti-Patterns (CS Fundamentals)
+Reject on sight: **Accidental quadratic**, **Wrong data structure for the access
+pattern**, **Hand-rolled standard structure**, **Unbounded recursion**, **Float equality
+comparison**, **Unchecked integer overflow**, **Premature micro-optimization** with no
+measurement.
+
+---
+
+## PART 14: CRYPTOGRAPHY & IDENTITY
+
+*Distilled from the most authoritative works on applied cryptography, TLS and PKI, and
+identity management.*
+
+### 14.1 Primitives
+
+- **NEVER** design, implement, or modify a cryptographic primitive. Use a vetted library.
+  This rule has no exceptions and no "but this case is simple."
+- **ALWAYS** prefer high-level, misuse-resistant interfaces (libsodium, Tink, platform
+  AEAD) over assembling primitives yourself.
+- **ALWAYS** use authenticated encryption (AES-GCM, ChaCha20-Poly1305). Encryption without
+  authentication is a vulnerability, not a weaker form of security.
+- **NEVER** use ECB mode, MD5 or SHA-1 for security purposes, DES or 3DES, or RSA with
+  PKCS#1 v1.5 encryption padding.
+- **ALWAYS** use a cryptographically secure RNG. Never a general-purpose `rand()`, never a
+  seeded PRNG, never a timestamp.
+
+### 14.2 Keys, Nonces, and Secrets
+
+- **NEVER** hardcode keys, secrets, or credentials in source, config, or container images.
+- **NEVER** reuse a nonce or IV with the same key. For GCM this is catastrophic — it
+  destroys confidentiality and authenticity at once.
+- **ALWAYS** separate keys by purpose. One key, one job.
+- **ALWAYS** plan rotation before deployment. A key you cannot rotate is a key you cannot
+  revoke.
+- **ALWAYS** store secrets in a dedicated manager (KMS, Vault, cloud secret store) with
+  audit logging and least-privilege access.
+
+### 14.3 Passwords & Credentials
+
+- **ALWAYS** hash passwords with a memory-hard function: Argon2id preferred, then scrypt,
+  then bcrypt. **NEVER** a fast hash such as SHA-256, and **NEVER** an unsalted hash.
+- **ALWAYS** use constant-time comparison for secrets, tokens, and MACs.
+- **ALWAYS** rate-limit and lock out on repeated authentication failure.
+
+### 14.4 Transport & Storage
+
+- **ALWAYS** require TLS 1.2 minimum, TLS 1.3 preferred, and verify certificates. Never
+  disable verification, not even in development — that setting ships.
+- **ALWAYS** encrypt sensitive data at rest with managed keys.
+- **ALWAYS** classify data before deciding protection. You cannot protect what you have
+  not inventoried.
+
+### 14.5 Identity, Sessions, and Tokens
+
+- **ALWAYS** use a standard protocol (OpenID Connect, SAML) and a vetted library. Do not
+  hand-roll authentication flows.
+- **ALWAYS** validate JWTs fully: signature, `alg` against an allowlist, issuer, audience,
+  and expiry. **NEVER** accept `alg: none` or trust the algorithm claimed in the header.
+- **ALWAYS** keep access tokens short-lived and pair them with revocable refresh tokens.
+- **ALWAYS** regenerate the session identifier on privilege change (login, elevation).
+- **ALWAYS** scope tokens to least privilege. A token that can do everything is a
+  credential you cannot safely issue.
+- **NEVER** put sensitive data in a JWT payload. It is signed, not encrypted — anyone can
+  read it.
+
+### Anti-Patterns (Cryptography & Identity)
+Reject on sight: **Roll-your-own crypto**, **ECB mode**, **Nonce or IV reuse**,
+**Hardcoded key or secret**, **Fast hash for passwords**, **`alg: none` or unverified
+JWT**, **Disabled certificate verification**, **Non-constant-time secret comparison**,
+**Long-lived token with no revocation path**, **Sensitive data in a JWT payload**.
+
+---
+
+## PART 15: DISTRIBUTED SYSTEMS & CONCURRENCY
+
+*Distilled from the most authoritative works on distributed systems, concurrent
+programming, and event-driven architecture.*
+
+### 15.1 Failure Is the Default
+
+- **ALWAYS** assume the network is unreliable, latency is non-zero, bandwidth is finite,
+  topology changes, and transport is not free. Each of these is a fallacy of distributed
+  computing when assumed away.
+- **ALWAYS** set an explicit timeout on every remote call. A call with no timeout is a
+  hang waiting to happen.
+- **ALWAYS** retry with exponential backoff **and jitter**. Synchronized retries turn a
+  blip into an outage.
+- **ALWAYS** bound retries and fail fast once the budget is exhausted.
+- **ALWAYS** isolate failure with bulkheads and circuit breakers so one slow dependency
+  cannot consume the whole thread pool.
+
+### 15.2 Consistency & Coordination
+
+- **ALWAYS** state the consistency model you require. "It should be consistent" is not a
+  design.
+- **ALWAYS** prefer eventual consistency with explicit reconciliation over distributed
+  transactions across services.
+- **NEVER** use two-phase commit across service boundaries. Use sagas with compensating
+  actions.
+- **ALWAYS** keep transactional boundaries inside one aggregate and one datastore.
+- **ALWAYS** use a proven implementation for consensus (Raft, Paxos). Never improvise
+  leader election.
+
+### 15.3 Delivery Semantics & Idempotency
+
+- **ALWAYS** design consumers to be idempotent. At-least-once is the realistic default;
+  exactly-once end-to-end is usually a marketing claim.
+- **ALWAYS** carry a stable message or request identifier for deduplication.
+- **ALWAYS** handle out-of-order delivery explicitly. Order is not guaranteed unless the
+  transport guarantees it and you have not partitioned around it.
+- **ALWAYS** define poison-message handling and a dead-letter path before shipping a consumer.
+
+### 15.4 Concurrency
+
+- **NEVER** share mutable state across threads without synchronization. Prefer
+  immutability, then message passing, then locks — in that order.
+- **ALWAYS** document the concurrency contract of a class or function: thread-safe,
+  thread-compatible, or single-threaded.
+- **ALWAYS** acquire locks in a consistent global order to prevent deadlock.
+- **NEVER** hold a lock across a blocking or remote call.
+- **ALWAYS** prefer the standard concurrency library. Double-checked locking, spin loops,
+  and lock-free structures are expert-only.
+- **NEVER** use `sleep` for coordination. Use the proper synchronization primitive.
+
+### 15.5 Time & Ordering
+
+- **NEVER** order distributed events by wall-clock time. Clocks skew.
+- **ALWAYS** use logical clocks, sequence numbers, or vector clocks when order matters.
+- **ALWAYS** store and transmit timestamps in UTC with an explicit offset.
+
+### 15.6 Observability
+
+- **ALWAYS** propagate a correlation or trace ID across every hop. Without it a
+  distributed failure cannot be reconstructed.
+- **ALWAYS** measure latency at percentiles (p50/p95/p99), never as an average. Averages
+  hide exactly the failures your users experience.
+
+### Anti-Patterns (Distributed & Concurrency)
+Reject on sight: **Remote call without timeout**, **Retry without backoff or jitter**
+(retry storm), **Two-phase commit across services**, **Non-idempotent consumer** on an
+at-least-once transport, **Wall-clock event ordering**, **Shared mutable state without
+synchronization**, **Lock held across a remote call**, **`sleep` as synchronization**,
+**Distributed monolith**, **Average latency as an SLI**.
+
+---
+
+## PART 16: DOCUMENTATION & TECHNICAL COMMUNICATION
+
+*Distilled from the most authoritative works on developer documentation, technical
+writing, and prose style.*
+
+### 16.1 Docs as Code
+
+- **ALWAYS** keep documentation in the repository next to the code it describes, in
+  plain text under version control.
+- **ALWAYS** review documentation changes the way you review code.
+- **ALWAYS** update documentation in the same change that alters behavior. A separate
+  "docs later" task is a documentation bug you have chosen to ship.
+- **ALWAYS** automate what can be automated: generated API references, tested examples,
+  link checking.
+
+### 16.2 Audience & Purpose
+
+- **ALWAYS** know which of the four kinds of document you are writing: tutorial (learning),
+  how-to (a specific goal), reference (lookup), or explanation (understanding). Mixing them
+  produces a document that serves nobody.
+- **ALWAYS** state the audience and prerequisites up front.
+- **ALWAYS** assume the reader arrives mid-document from a search engine. Every page must
+  establish its own context.
+
+### 16.3 Structure & Findability
+
+- **ALWAYS** lead with the conclusion or the goal. The reader decides in one screen
+  whether this page is the right one.
+- **ALWAYS** use descriptive headings that work as a table of contents.
+- **ALWAYS** keep procedures numbered, one action per step, with the expected result stated.
+- **ALWAYS** show a complete, runnable example. A fragment that assumes hidden state is
+  worse than no example.
+
+### 16.4 Writing Quality
+
+- **ALWAYS** prefer the active voice and the concrete noun.
+- **ALWAYS** cut every word that does not change meaning. Length is not thoroughness.
+- **NEVER** use "simply", "just", "obviously", or "easy". They tell a stuck reader the
+  problem is them.
+- **ALWAYS** define a term on first use, or link to its definition. Be consistent
+  afterward — one concept, one name.
+- **ALWAYS** write error and troubleshooting content for the reader's symptom, not the
+  system's internals.
+
+### 16.5 Maintenance
+
+- **ALWAYS** give every document an owner and a last-reviewed date.
+- **ALWAYS** delete documentation that is wrong. Wrong documentation is more expensive
+  than missing documentation.
+- **NEVER** treat "the code is self-documenting" as a substitute for explaining WHY.
+  Code states what; it cannot state why an alternative was rejected.
+
+### Anti-Patterns (Documentation)
+Reject on sight: **Stale docs** contradicting behavior, **Docs outside version control**,
+**Mixed document types** (tutorial spliced into reference), **Example that will not run**,
+**Undocumented breaking change**, **"Simply"/"just"** in instructional text, **Wall of
+prose** where a procedure or table belongs, **"Self-documenting code"** used to justify
+absent rationale.
+
+---
+
+## PART 17: OFFENSIVE SECURITY & ASSESSMENT
+
+*Distilled from the most authoritative works on penetration testing, vulnerability
+research, and security assessment. These standards govern **authorized** testing only.*
+
+### 17.1 Authorization — Non-Negotiable
+
+- **NEVER** perform security testing without explicit written authorization naming the
+  systems in scope, the permitted techniques, and the testing window.
+- **ALWAYS** confirm the scope boundary before the first packet. "It looked in scope" is
+  not a defense.
+- **ALWAYS** stop and escalate when testing reveals systems, data, or third parties
+  outside the agreed scope.
+- **ALWAYS** respect the rules of engagement on destructive testing, data access, social
+  engineering, and denial of service. Absent explicit permission, the answer is no.
+- **ALWAYS** keep an authorization record and a contact for emergency stop available for
+  the duration of the engagement.
+
+### 17.2 Methodology
+
+- **ALWAYS** follow a repeatable methodology (PTES, OWASP WSTG, or equivalent) rather than
+  improvising. Coverage is the deliverable; a lucky finding is not.
+- **ALWAYS** enumerate thoroughly before exploiting. Most findings come from enumeration.
+- **ALWAYS** map the attack surface systematically: entry points, trust boundaries,
+  authentication paths, and data flows.
+- **ALWAYS** test the business logic, not only the technology. Authorization flaws and
+  workflow abuse rarely show up in a scanner.
+
+### 17.3 Conduct During Testing
+
+- **ALWAYS** prefer the least invasive proof that demonstrates the issue. Prove access;
+  do not exfiltrate.
+- **NEVER** access, copy, or retain production personal data beyond what is required to
+  demonstrate the finding.
+- **ALWAYS** log every action with timestamps so the client can reconcile your activity
+  against their alerts.
+- **ALWAYS** clean up: remove uploaded tooling, test accounts, and persistence. Leaving
+  artifacts behind is a finding against you.
+- **ALWAYS** report critical findings immediately rather than saving them for the report.
+
+### 17.4 Reporting
+
+- **ALWAYS** write findings with: reproduction steps, evidence, affected assets, business
+  impact, severity with the reasoning behind it, and concrete remediation.
+- **ALWAYS** rate severity by exploitability and business impact together, not by scanner
+  score alone.
+- **NEVER** deliver a raw tool dump as a report. Unvalidated scanner output is not an
+  assessment.
+- **ALWAYS** distinguish confirmed findings from theoretical ones, and say which is which.
+- **ALWAYS** offer to retest after remediation. A finding is not closed until it is verified.
+
+### 17.5 Defensive Application
+
+- **ALWAYS** convert findings into durable defenses: a regression test, a detection rule,
+  or a control — not just a patch.
+- **ALWAYS** feed recurring finding classes back into design review and threat modeling.
+
+### Anti-Patterns (Offensive Security)
+Reject on sight: **Testing without written authorization**, **Scope creep**,
+**Destructive or DoS testing without explicit permission**, **Exfiltrating real data to
+prove access**, **Unreported critical finding**, **Raw scanner dump as a report**,
+**Severity without business context**, **Artifacts left in the client environment**,
+**Finding closed without retest**.
+
+---
+
+## PART 18: PERFORMANCE ENGINEERING
+
+*Distilled from the most authoritative works on systems performance, profiling, and web
+performance.*
+
+### 18.1 Measure First
+
+- **NEVER** optimize without a measurement. Intuition about bottlenecks is wrong often
+  enough to be worthless.
+- **ALWAYS** establish a baseline before changing anything, and re-measure after.
+- **ALWAYS** profile the real workload. A synthetic benchmark that does not match
+  production traffic optimizes the wrong thing.
+- **ALWAYS** state a performance target with a number and a percentile before optimizing.
+  "Faster" is not a goal.
+
+### 18.2 Methodology
+
+- **ALWAYS** work top-down: application, then runtime, then OS, then hardware. Most wins
+  are algorithmic or architectural, not low-level.
+- **ALWAYS** apply a systematic method — USE (Utilization, Saturation, Errors) for
+  resources, RED (Rate, Errors, Duration) for services — rather than guessing.
+- **ALWAYS** find the actual bottleneck before tuning. Optimizing a non-bottleneck changes
+  nothing, and you will have spent the time proving it.
+- **ALWAYS** report latency as percentiles (p50/p95/p99/p99.9). An average is not a user
+  experience.
+
+### 18.3 Optimization Discipline
+
+- **ALWAYS** fix the algorithm before the constant. An O(n^2) to O(n log n) change beats
+  any amount of micro-tuning.
+- **ALWAYS** attack the largest contributor first. Amdahl's law bounds what a local fix
+  can achieve.
+- **NEVER** trade readability for performance without a measurement proving the trade is
+  necessary, and a comment recording it.
+- **ALWAYS** reduce work before making work faster. The fastest call is the one you do not make.
+- **NEVER** add a cache before understanding the access pattern. A cache adds a
+  correctness problem (invalidation) to buy latency — make that trade knowingly.
+
+### 18.4 Data & I/O
+
+- **ALWAYS** batch to amortize per-operation overhead, and stream when data exceeds memory.
+- **ALWAYS** eliminate N+1 access patterns at the source rather than caching around them.
+- **ALWAYS** consider memory locality and allocation pressure in hot paths.
+
+### 18.5 Frontend & Network
+
+- **ALWAYS** measure Core Web Vitals in the field, not only in the lab.
+- **ALWAYS** minimize the critical rendering path: fewer render-blocking resources,
+  compressed and correctly sized assets, deferred non-essential work.
+- **ALWAYS** account for latency, not just bandwidth. Round trips dominate on real networks.
+
+### 18.6 Preventing Regression
+
+- **ALWAYS** add a performance regression test or budget once a bottleneck is fixed.
+  Otherwise it returns.
+- **ALWAYS** monitor the metric in production. Performance work without production
+  telemetry is unverified.
+
+### Anti-Patterns (Performance)
+Reject on sight: **Optimizing without profiling**, **Average latency as the metric**,
+**Micro-optimizing a cold path**, **N+1 query or request**, **Cache added before the
+access pattern is understood**, **Benchmark without warmup or variance**, **Readability
+sacrificed with no measurement**, **Fix with no regression guard**.
+
+---
+
+## PART 19: PLATFORM ENGINEERING
+
+*Distilled from the most authoritative works on platform engineering, Kubernetes,
+infrastructure as code, and team topologies.*
+
+### 19.1 Platform as Product
+
+- **ALWAYS** treat the platform as a product with users, not a mandate. Its users are
+  engineers, and adoption is the measure of success.
+- **ALWAYS** make the platform optional and good enough that teams choose it. A platform
+  that requires a mandate is failing.
+- **ALWAYS** measure platform success by user outcomes — lead time, change failure rate,
+  time to first deploy — not by feature count.
+- **NEVER** build a platform capability nobody asked for before the third team has hit
+  the same problem.
+
+### 19.2 Golden Paths
+
+- **ALWAYS** provide a paved road: an opinionated, supported, documented default for the
+  common case.
+- **ALWAYS** keep the paved road genuinely faster than the alternative. Convenience, not
+  policy, drives adoption.
+- **ALWAYS** allow escape hatches. A platform with no way off it is a cage, and teams with
+  genuine edge cases will route around it entirely.
+- **ALWAYS** make the secure and compliant path the default path.
+
+### 19.3 Self-Service & Cognitive Load
+
+- **ALWAYS** design for self-service. A platform team that is a ticket queue is a
+  bottleneck wearing a platform costume.
+- **ALWAYS** reduce the consumer's cognitive load — that is the entire justification for
+  the platform's existence.
+- **ALWAYS** expose the right abstraction level. Leaking every Kubernetes primitive to
+  application teams is not a platform.
+
+### 19.4 Infrastructure as Code
+
+- **ALWAYS** define infrastructure declaratively in version control. No manual console changes.
+- **ALWAYS** keep infrastructure immutable: replace, never patch in place.
+- **ALWAYS** make infrastructure changes reviewable and reversible, with a plan step
+  before apply.
+- **NEVER** allow environment drift. Environments differ by configuration, never by
+  hand-applied change.
+- **ALWAYS** store state securely with locking. A shared unlocked state file is an outage
+  waiting for two engineers.
+
+### 19.5 Containers & Orchestration
+
+- **ALWAYS** set resource requests and limits. Unbounded workloads on a shared cluster
+  are a noisy-neighbor incident in waiting.
+- **ALWAYS** define liveness and readiness probes, and understand the difference.
+- **ALWAYS** run containers as non-root, with a read-only root filesystem where possible,
+  from minimal pinned base images.
+- **NEVER** bake secrets into images. Inject at runtime from a secret manager.
+- **ALWAYS** treat `kubectl apply` from a laptop as an incident, not a deployment process.
+
+### 19.6 GitOps & Delivery
+
+- **ALWAYS** make the repository the source of truth, with reconciliation toward the
+  declared state.
+- **ALWAYS** make deployments observable and reversible. Rollback is a first-class path.
+- **ALWAYS** track cost per tenant or per service. Unattributed cost is unmanaged cost.
+
+### Anti-Patterns (Platform Engineering)
+Reject on sight: **Platform nobody asked for**, **Mandated platform with no golden path**,
+**Platform team as a ticket queue**, **Snowflake environment** (manual console changes),
+**Workload without resource limits**, **Secret baked into an image**, **`kubectl apply`
+as the deployment process**, **No escape hatch**, **Leaked primitives** (raw orchestrator
+exposed as the platform API), **Unattributed cost**.
+
+---
+
+## PART 20: SECURITY OPERATIONS & INFRASTRUCTURE
+
+*Distilled from the most authoritative works on network security monitoring, incident
+response, threat intelligence, and zero-trust infrastructure.*
+
+### 20.1 Detection Engineering
+
+- **ALWAYS** write detections against attacker behavior, not single indicators. Hashes and
+  IPs rotate; techniques persist.
+- **ALWAYS** treat detections as code: version controlled, reviewed, and tested against
+  known-good and known-bad samples.
+- **ALWAYS** tune for precision. An alert nobody can act on trains the team to ignore alerts.
+- **NEVER** deploy a detection without a response runbook. An alert with no defined action
+  is noise with extra steps.
+- **ALWAYS** map coverage to a framework (ATT&CK or equivalent) so gaps are visible rather
+  than assumed.
+
+### 20.2 Logging & Telemetry
+
+- **ALWAYS** decide what to log from the detections and investigations you need to support,
+  not by logging everything and hoping.
+- **ALWAYS** centralize logs outside the systems that generate them. An attacker with host
+  access edits local logs.
+- **ALWAYS** protect log integrity and set retention to match your realistic detection
+  window — breaches are found in months, not days.
+- **ALWAYS** synchronize time across sources. Correlation is impossible without it.
+- **NEVER** log secrets, credentials, tokens, or unnecessary personal data.
+
+### 20.3 Incident Response
+
+- **ALWAYS** have a written incident response plan with defined roles, severity levels,
+  and communication paths — before you need it.
+- **ALWAYS** exercise the plan. An untested plan is a document, not a capability.
+- **ALWAYS** follow the lifecycle: preparation, identification, containment, eradication,
+  recovery, lessons learned. Skipping preparation makes every later phase improvised.
+- **ALWAYS** preserve evidence before remediating. Rebuilding the host destroys the
+  answer to how it happened.
+- **ALWAYS** maintain a timeline during the incident, not after.
+- **ALWAYS** run a blameless post-incident review that produces owned, dated actions.
+
+### 20.4 Threat Intelligence & Hunting
+
+- **ALWAYS** drive intelligence from your own threat model. Generic feeds without context
+  generate noise, not insight.
+- **ALWAYS** hunt from a hypothesis. Aimless log browsing is not hunting.
+- **ALWAYS** convert a successful hunt into a durable detection. A finding you cannot
+  detect again is a finding you will have again.
+
+### 20.5 Infrastructure Hardening & Zero Trust
+
+- **NEVER** treat the network perimeter as a trust boundary. Authenticate and authorize
+  every request regardless of origin.
+- **ALWAYS** apply least privilege to humans, services, and machines alike, and review it
+  on a schedule.
+- **ALWAYS** prefer short-lived, automatically rotated credentials over static ones.
+- **ALWAYS** segment the network so lateral movement is constrained by default.
+- **ALWAYS** patch on a defined SLA driven by exploitability, and know your asset
+  inventory — you cannot patch what you do not know you run.
+- **ALWAYS** scan images and dependencies continuously, and fail the pipeline on critical
+  findings.
+- **ALWAYS** secure the backup path and test restores. Unverified backups are not backups,
+  and ransomware targets them first.
+
+### Anti-Patterns (Security Operations)
+Reject on sight: **Alert fatigue** (untuned, unactionable alerts), **Detection with no
+runbook**, **Logs stored only on the host that produced them**, **Retention shorter than
+the detection window**, **Incident response plan never exercised**, **Remediating before
+preserving evidence**, **Perimeter trust**, **Static long-lived credentials**, **Flat
+network**, **Untested backups**, **Secrets in environment variables or images**.
+
+---
+
+## PART 21: WORK-TYPE CHECKLISTS
 
 These checklists are triggered by the type of work being performed. Multiple work types
 can apply simultaneously — use the union of all applicable checklists.
@@ -652,6 +1431,9 @@ can apply simultaneously — use the union of all applicable checklists.
 - [ ] SECURITY: No hardcoded secrets, no sensitive data logged
 - [ ] DEVOPS: Configuration externalized, not hardcoded
 - [ ] DATA: Queries optimized, no SELECT *, no N+1
+- [ ] FUNDAMENTALS: Complexity known, no accidental quadratic
+- [ ] FUNDAMENTALS: Correct data structure for the access pattern
+- [ ] CONCURRENCY: Shared state synchronized, concurrency contract stated
 - [ ] UX: Accessible, responsive, follows design system (if UI work)
 ```
 
@@ -667,6 +1449,8 @@ can apply simultaneously — use the union of all applicable checklists.
 - [ ] DATA: Schema migrations are additive/non-destructive
 - [ ] DELIVERY: Change is small-batch, independently deployable
 - [ ] DEVOPS: Rollback strategy exists for this change
+- [ ] PERFORMANCE: No regression introduced on a measured hot path
+- [ ] DOCUMENTATION: Docs updated in this same change if behavior changed
 ```
 
 ### REVIEW_CODE
@@ -682,6 +1466,9 @@ can apply simultaneously — use the union of all applicable checklists.
 - [ ] SECURITY: Secrets management, output encoding checked
 - [ ] DATA: Query patterns, indexing, schema design evaluated
 - [ ] DEVOPS: Observability, deployment safety evaluated
+- [ ] FUNDAMENTALS: Complexity and data structure choices evaluated
+- [ ] CONCURRENCY: Timeouts, idempotency, shared-state safety evaluated
+- [ ] API: Contract changes are non-breaking or versioned
 ```
 
 ### DESIGN_SYSTEM
@@ -701,6 +1488,11 @@ can apply simultaneously — use the union of all applicable checklists.
 - [ ] DEVOPS: SLOs/SLIs defined
 - [ ] PRODUCT: Success metrics defined (outcomes, not outputs)
 - [ ] DELIVERY: Work broken into incremental deliverables
+- [ ] API: Contract designed before implementation, versioning strategy set
+- [ ] DISTRIBUTED: Failure modes, timeouts, and consistency model defined
+- [ ] CRYPTO: Identity, session, and token strategy uses standard protocols
+- [ ] PLATFORM: Runtime, IaC, and golden-path fit considered
+- [ ] DOCUMENTATION: Decision rationale captured where readers will find it
 ```
 
 ### WRITE_TESTS
@@ -731,6 +1523,8 @@ can apply simultaneously — use the union of all applicable checklists.
 - [ ] DATA: Database migrations tested and reversible
 - [ ] DELIVERY: Release notes prepared
 - [ ] DELIVERY: Stakeholders notified
+- [ ] PLATFORM: Deployed via the declared pipeline, not by hand
+- [ ] SECOPS: Deployment and access events are logged centrally
 ```
 
 ### DATA_WORK
@@ -761,6 +1555,7 @@ can apply simultaneously — use the union of all applicable checklists.
 - [ ] DELIVERY: Work broken into small increments
 - [ ] DELIVERY: Definition of Done established
 - [ ] UX: User journey mapped, accessibility considered
+- [ ] DOCUMENTATION: Documentation work scoped as part of the feature, not after
 ```
 
 ### DESIGN_UI
@@ -771,6 +1566,7 @@ can apply simultaneously — use the union of all applicable checklists.
 - [ ] UX: Responsive/mobile-first design
 - [ ] UX: Core Web Vitals considered
 - [ ] UX: Design tokens and component system used
+- [ ] PERFORMANCE: Critical rendering path and Core Web Vitals budgeted
 - [ ] ENGINEERING: Components follow atomic design principles
 - [ ] SECURITY: No sensitive data exposed in UI
 - [ ] SECURITY: Client-side validation is UX only (server validates)
@@ -788,13 +1584,115 @@ can apply simultaneously — use the union of all applicable checklists.
 - [ ] SECURITY: Security implications assessed (breach? data exposure?)
 - [ ] SECURITY: If security incident, escalation procedures followed
 - [ ] DATA: Data integrity verified after incident
+- [ ] SECOPS: Evidence preserved before remediation
+- [ ] SECOPS: Timeline maintained during the incident, not reconstructed after
 - [ ] LEADERSHIP: Stakeholders communicated with
-- [ ] LEADERSHIP: Blameless postmortem scheduled
+- [ ] LEADERSHIP: Blameless postmortem scheduled with owned, dated actions
+```
+
+### BUILD_AI_FEATURE
+
+```
+- [ ] AI: Deterministic alternative ruled out before reaching for a model
+- [ ] AI: Success criterion defined numerically before building
+- [ ] AI: Prompts version-controlled and reviewed, not inline literals
+- [ ] AI: Untrusted input delimited and labeled — no raw concatenation
+- [ ] AI: Output contract specified, parsed, and validated
+- [ ] AI: Eval set exists, built from real failures, with a held-out split
+- [ ] AI: Retrieval evaluated separately from generation (if RAG)
+- [ ] AI: Model version pinned; eval re-run on version change
+- [ ] AI: Prompt, response, model version, and token counts logged
+- [ ] AI: Timeouts, retries, fallback path, and cost budget enforced in code
+- [ ] SECURITY: Model output treated as untrusted before any downstream use
+- [ ] SECURITY: Human confirmation required for irreversible model-triggered actions
+```
+
+### DESIGN_API
+
+```
+- [ ] API: Contract designed before implementation
+- [ ] API: Internal models not exposed directly on the wire
+- [ ] API: HTTP semantics honored (safety, idempotency, status codes)
+- [ ] API: Versioning strategy chosen and applied uniformly
+- [ ] API: Errors machine-readable with stable codes, no internal leakage
+- [ ] API: Every collection endpoint paginated
+- [ ] API: Idempotency key supported for retryable non-idempotent operations
+- [ ] API: Machine-readable spec published and verified against behavior
+- [ ] SECURITY: Auth/authz enforced server-side on every endpoint
+- [ ] DISTRIBUTED: Timeouts, jittered retries, and circuit breakers at integration points
+- [ ] TESTING: Contract tests prevent spec/behavior drift
+- [ ] DOCUMENTATION: Breaking changes documented with a migration path
+```
+
+### WRITE_DOCS
+
+```
+- [ ] DOCUMENTATION: Document type chosen deliberately (tutorial/how-to/reference/explanation)
+- [ ] DOCUMENTATION: Audience and prerequisites stated up front
+- [ ] DOCUMENTATION: Conclusion or goal leads; page stands alone for a search arrival
+- [ ] DOCUMENTATION: Procedures numbered, one action per step, expected result stated
+- [ ] DOCUMENTATION: Examples complete and runnable, not fragments
+- [ ] DOCUMENTATION: Active voice; no "simply", "just", "obviously", or "easy"
+- [ ] DOCUMENTATION: Terms defined on first use and named consistently
+- [ ] DOCUMENTATION: Lives in version control beside the code it describes
+- [ ] DOCUMENTATION: Owner and last-reviewed date present
+- [ ] DOCUMENTATION: WHY captured, not just WHAT
+```
+
+### PERFORMANCE_WORK
+
+```
+- [ ] PERFORMANCE: Baseline measured before any change
+- [ ] PERFORMANCE: Target stated as a number at a percentile
+- [ ] PERFORMANCE: Real workload profiled, not a synthetic guess
+- [ ] PERFORMANCE: Actual bottleneck identified before tuning
+- [ ] PERFORMANCE: Algorithmic fix considered before micro-optimization
+- [ ] PERFORMANCE: Latency reported as percentiles, never as an average
+- [ ] PERFORMANCE: Caching decisions made with the access pattern understood
+- [ ] PERFORMANCE: Re-measured after the change; improvement demonstrated
+- [ ] PERFORMANCE: Regression test or budget added to hold the gain
+- [ ] PERFORMANCE: Production telemetry confirms the improvement
+- [ ] ENGINEERING: Readability trade-offs documented where they were made
+- [ ] FUNDAMENTALS: Complexity and memory behavior accounted for
+```
+
+### PLATFORM_WORK
+
+```
+- [ ] PLATFORM: Capability driven by real, repeated demand — not speculation
+- [ ] PLATFORM: Golden path documented and genuinely faster than the alternative
+- [ ] PLATFORM: Escape hatch exists for legitimate edge cases
+- [ ] PLATFORM: Self-service by default; no ticket queue in the critical path
+- [ ] PLATFORM: Infrastructure declarative and in version control
+- [ ] PLATFORM: Plan step reviewed before apply; change is reversible
+- [ ] PLATFORM: State stored securely with locking
+- [ ] PLATFORM: Resource requests and limits set; probes defined
+- [ ] PLATFORM: Containers non-root, minimal pinned base images
+- [ ] SECURITY: No secrets baked into images; injected at runtime
+- [ ] SECOPS: Least privilege applied to service and machine identities
+- [ ] DEVOPS: Rollback is a first-class, tested path
+```
+
+### SECURITY_ASSESSMENT
+
+```
+- [ ] OFFENSIVE: Written authorization obtained, naming scope, techniques, and window
+- [ ] OFFENSIVE: Scope boundary confirmed before testing begins
+- [ ] OFFENSIVE: Rules of engagement respected (destructive testing, data, DoS, social)
+- [ ] OFFENSIVE: Emergency stop contact available for the engagement duration
+- [ ] OFFENSIVE: Repeatable methodology followed; coverage recorded
+- [ ] OFFENSIVE: Least invasive proof used — access proven, data not exfiltrated
+- [ ] OFFENSIVE: Actions logged with timestamps for client reconciliation
+- [ ] OFFENSIVE: Critical findings reported immediately, not held for the report
+- [ ] OFFENSIVE: Artifacts, test accounts, and persistence removed
+- [ ] OFFENSIVE: Findings include repro, evidence, impact, reasoned severity, remediation
+- [ ] OFFENSIVE: Confirmed findings distinguished from theoretical ones
+- [ ] SECOPS: Findings converted into durable detections or controls
 ```
 
 ---
 
-## PART 12: ENFORCEMENT & REPORTING PROTOCOL
+## PART 22: ENFORCEMENT & REPORTING PROTOCOL
 
 ### Step 1: Classify Work Type
 
@@ -812,17 +1710,23 @@ At the start of every task, classify the work type(s) using these triggers:
 | PLAN_FEATURE | "plan", "scope", "estimate", product decisions |
 | DESIGN_UI | "design", "layout", "component", UI/UX work |
 | INCIDENT_RESPONSE | "outage", "incident", "down", "broken in production" |
+| BUILD_AI_FEATURE | LLM/model calls, prompts, agents, RAG, evals, embeddings |
+| DESIGN_API | designing or changing an API contract, endpoints, schemas, webhooks |
+| WRITE_DOCS | README, guides, reference docs, runbooks, ADR prose |
+| PERFORMANCE_WORK | "slow", "optimize", profiling, latency, throughput, memory |
+| PLATFORM_WORK | Kubernetes, Terraform, containers, IaC, CI platform, developer tooling |
+| SECURITY_ASSESSMENT | pentest, red team, vulnerability assessment, authorized testing |
 
 Multiple types can apply simultaneously. Use the union of all applicable checklists.
 
 ### Step 2: Apply Domain Rules
 
-During work, continuously apply the rules from Parts 1-10. These are not just for
+During work, continuously apply the rules from Parts 1-20. These are not just for
 the checklist — they guide every decision during implementation.
 
 ### Step 3: Run Checklist
 
-Before delivering any work product, run the applicable checklist(s) from Part 11.
+Before delivering any work product, run the applicable checklist(s) from Part 21.
 
 ### Step 4: Report
 
@@ -839,6 +1743,7 @@ Include a checklist report with your delivery in this format:
 - [x] DEVOPS: Configuration externalized
 
 **Result: X/Y passed. Z action items.**
+**Domains applied: [list]. Domains not applicable: [list].**
 ---
 ```
 
@@ -890,7 +1795,17 @@ You can launch a full development team for comprehensive multi-domain review and
 | **Product Analyst** | User value, outcomes, scope, validation |
 | **UX Reviewer** | Accessibility, usability, performance, design system |
 | **Delivery Lead** | Process, estimation, flow, incremental delivery |
-| **Engineering Manager** | ADRs, team health, decision quality |
+| **Technical Lead** | ADRs, decision quality, review quality, knowledge distribution |
+| **AI Engineer** | Prompt/context design, evaluation rigor, model ops, output safety |
+| **API Designer** | Contract design, versioning, error semantics, integration patterns |
+| **CS Generalist** | Complexity, data structures, algorithmic correctness, systems limits |
+| **Cryptographer** | Primitives, key management, identity, sessions, tokens |
+| **Distributed Systems Engineer** | Failure modes, consistency, idempotency, concurrency |
+| **Technical Writer** | Doc type, structure, findability, accuracy, maintenance |
+| **Offensive Security Engineer** | Authorization, methodology, exploitability, reporting |
+| **Performance Engineer** | Measurement, bottleneck analysis, regression prevention |
+| **Platform Engineer** | Golden paths, IaC, orchestration, self-service, cost |
+| **Security Operations Engineer** | Detection, logging, IR readiness, zero trust |
 
 ### How to Launch
 
@@ -948,9 +1863,18 @@ Not every task needs the full team. Match specialists to the work:
 - **Code PR review** → Software Engineer + QA + Security (+ Data/DevOps if relevant)
 - **System design** → Architect + Security + DevOps + Data + Product
 - **Feature planning** → Product + UX + Delivery + Architect
-- **Incident response** → DevOps + Security + Data + Eng Manager
-- **UI work** → UX + Software Engineer + QA + Security
+- **Incident response** → DevOps + Security Operations + Data + Technical Lead
+- **UI work** → UX + Software Engineer + QA + Performance
 - **Data work** → Data + Security + DevOps + QA
+- **AI/LLM feature** → AI Engineer + Security + QA + Performance
+- **API design or change** → API Designer + Architect + Security + Technical Writer
+- **Distributed/async system** → Distributed Systems Engineer + Architect + DevOps + Data
+- **Auth, crypto, or identity work** → Cryptographer + Security + Architect
+- **Performance investigation** → Performance Engineer + CS Generalist + Data + DevOps
+- **Platform or infrastructure work** → Platform Engineer + DevOps + Security Operations
+- **Security assessment** → Offensive Security + Security + Security Operations
+- **Algorithm-heavy work** → CS Generalist + Software Engineer + QA + Performance
+- **Documentation effort** → Technical Writer + the owning domain specialist
 
 ---
 
@@ -967,7 +1891,7 @@ These principles have different weights depending on scope:
 | Component/package | Boundaries, dependency rule, bounded contexts |
 | Application | Architecture style, quality attributes, data model, security |
 | Distributed system | Service design, failure modes, consistency, observability |
-| Full project | All of the above + delivery, product, team, leadership |
+| Full project | All of the above + delivery, product, team, leadership, platform |
 
 Do NOT apply system-level concerns to a single function. Do NOT ignore naming standards
 when designing a system. Match the principle to the scope.
@@ -981,7 +1905,7 @@ They are NOT bureaucratic checkboxes.
 - A prototype explicitly labeled as throwaway can bend the rules.
 - Performance-critical code may sacrifice some readability with clear documentation.
 - Legacy code being incrementally improved should not be rewritten in one pass.
-- Not every PR needs all 10 domains evaluated — use judgment on relevance.
+- Not every PR needs all 20 domains evaluated — use judgment on relevance.
 - Checklists should surface real issues, not generate noise.
 
 ### When Citing Principles

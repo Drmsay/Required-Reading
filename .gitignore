@@ -1,0 +1,12 @@
+# Reference library — 2.3 GB of PDFs. Never commit these.
+# The books are source material for the standards, not part of the plugin.
+books/
+
+# Node
+node_modules/
+npm-debug.log*
+*.tgz
+
+# OS
+.DS_Store
+Thumbs.db

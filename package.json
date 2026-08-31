@@ -1,13 +1,14 @@
 {
   "name": "required-reading",
-  "version": "2.0.1",
-  "description": "Full-lifecycle engineering standards enforcement for Claude Code — covers 10 domains from code quality to architecture, testing, security, DevOps, data, delivery, product, UX, and leadership. Includes checklists, multi-agent team mode, and domain specialist deep-dives.",
+  "version": "3.0.0",
+  "description": "Full-lifecycle engineering standards enforcement for Claude Code — covers 20 domains from code quality to architecture, testing, security, DevOps, data, delivery, product, UX, leadership, AI/LLM engineering, API design, CS fundamentals, cryptography, distributed systems, documentation, offensive security, performance, platform engineering, and security operations. Includes checklists, multi-agent team mode, and domain specialist deep-dives.",
   "bin": {
     "required-reading": "bin/install.js"
   },
   "files": [
     "bin/install.js",
-    "skills/*/SKILL.md"
+    "skills/*/SKILL.md",
+    "claude-md-snippet.md"
   ],
   "keywords": [
     "claude",
@@ -30,7 +31,21 @@
     "accessibility",
     "technical-leadership",
     "checklists",
-    "multi-agent"
+    "multi-agent",
+    "ai-engineering",
+    "llm",
+    "api-design",
+    "cryptography",
+    "distributed-systems",
+    "concurrency",
+    "documentation",
+    "offensive-security",
+    "performance",
+    "platform-engineering",
+    "kubernetes",
+    "security-operations",
+    "algorithms",
+    "computer-science"
   ],
   "author": "Drmsay",
   "license": "MIT",
